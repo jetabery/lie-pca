@@ -2,7 +2,7 @@ import autograd.numpy as np
 import matplotlib.pyplot as plt
 import scipy.integrate
 import sklearn.decomposition
-import gudhi.subsampling
+# import gudhi.subsampling
 
 # Taken from https://github.com/HLovisiEnnes/LieDetect
 def ThreeBodyEquation(t, y):
@@ -37,7 +37,7 @@ def MakeDataset(InitialValue, Period, T, N_points_subsample, method_space):
                       solution.y[6],solution.y[7],solution.y[8],solution.y[9],solution.y[10],solution.y[11])).T
 
     # Subsample with gudhi    
-    X = np.array(gudhi.subsampling.choose_n_farthest_points(points=X, nb_points = N_points_subsample))
+#     X = np.array(gudhi.subsampling.choose_n_farthest_points(points=X, nb_points = N_points_subsample))
 
     # # Compute integration error (norm between first and last point --- they should be equal)
     integration_error = np.linalg.norm(solution.y[:,0] - solution.y[:,-1])
@@ -94,6 +94,17 @@ Broucke = {
 'R13':([0.9017748598,0.0000000000,-0.6823433302,0.0000000000,-0.2194315296,0.0000000000,
       0.0000000000,0.9526089117,0.0000000000,-1.6721104565,0.0000000000,0.7195015448],
      22.764421)}
+
+def plot_paths(X):
+    plt.figure(figsize=(10, 6))
+    plt.plot(X[:, 0], X[:, 1], label='Body 1')
+    plt.plot(X[:, 2], X[:, 3], label='Body 2')
+    plt.plot(X[:, 4], X[:, 5], label='Body 3')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.title('Paths of the 3 Bodies')
+    plt.legend()
+    plt.show()
 
 
 if __name__=='__main__':

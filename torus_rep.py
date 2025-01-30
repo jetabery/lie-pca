@@ -89,7 +89,9 @@ def plot_results(x, x_approx, projection=None):
     ax.scatter(x_plot[:, 0], x_plot[:, 1], x_plot[:, 2], label='Original', s=1)
     ax.plot(x_approx_plot[:, 0], x_approx_plot[:, 1], x_approx_plot[:, 2], label='Approximated', color='red')
     ax.legend()
+    ax.set_axis_off()
     plt.show()
+
 
 if __name__=='__main__':
     rng = np.random.default_rng()
