@@ -67,10 +67,15 @@ def construct_orbit(P, x_start, num_points=1000):
     return x_approx
 
 def plot_results(x, x_approx, projection=None, rng=None):
+    is_complex = x.dtype == complex
     if rng is None:
         rng = np.random.default_rng()
-    x_real = np.vstack([x.real, x.imag]).T  # Shape becomes (n, 2*d)
-    x_approx_real = np.vstack([x_approx.real, x_approx.imag]).T
+    if is_complex:
+        x_real = np.vstack([x.real, x.imag]).T  # Shape becomes (n, 2*d)
+        x_approx_real = np.vstack([x_approx.real, x_approx.imag]).T
+    else:
+        x_real = x.T
+        x_approx_real = x_approx.T
 
     if projection is None:
         x_plot = x_real[:, :3]
@@ -80,7 +85,10 @@ def plot_results(x, x_approx, projection=None, rng=None):
         x_plot = pca.fit_transform(x_real)  # Shape will be (n, 3)
         x_approx_plot = pca.transform(x_approx_real)
     elif projection == 'random':
-        proj_mat, _ = np.linalg.qr(rng.normal(0, 1, (2*x.shape[0], 3)))
+        if is_complex:
+            proj_mat, _ = np.linalg.qr(rng.normal(0, 1, (2*x.shape[0], 3)))
+        else:
+            proj_mat, _ = np.linalg.qr(rng.normal(0, 1, (x.shape[0], 3)))
         x_plot = x_real @ proj_mat
         x_approx_plot = x_approx_real @ proj_mat
     else:
@@ -103,4 +111,4 @@ if __name__=='__main__':
     x_start = np.sum(x[:, :5], axis=1) / 5
     x_approx = construct_orbit(P, x_start, num_points=x.shape[1])
 
-    plot_results(x, x_approx, projection='random')
+    plot_results(x, x_approx, projection='random', rng=rng)

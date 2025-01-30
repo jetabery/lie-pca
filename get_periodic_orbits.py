@@ -101,7 +101,7 @@ def make_broucke_path(name):
         Period=Period,T=0.005,N_points_subsample=1000,method_space='position')
     return X
 
-def plot_paths(X):
+def plot_orbit(X):
     plt.figure(figsize=(10, 6))
     plt.plot(X[:, 0], X[:, 1], label='Body 1')
     plt.plot(X[:, 2], X[:, 3], label='Body 2')
@@ -113,6 +113,20 @@ def plot_paths(X):
     plt.axis('equal')
     plt.show()
 
+def plot_orbit_and_approx(X, x_approx):
+    plt.figure(figsize=(10, 6))
+    plt.plot(X[:, 0], X[:, 1], label='Body 1', color='red')
+    plt.plot(X[:, 2], X[:, 3], label='Body 2', color='green')
+    plt.plot(X[:, 4], X[:, 5], label='Body 3', color='blue')
+    plt.plot(x_approx[:, 0], x_approx[:, 1], label='Body 1', color='red', linestyle='--')
+    plt.plot(x_approx[:, 2], x_approx[:, 3], label='Body 2', color='green', linestyle='--')
+    plt.plot(x_approx[:, 4], x_approx[:, 5], label='Body 3', color='blue', linestyle='--')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.title('Paths of the 3 Bodies')
+    plt.legend()
+    plt.axis('equal')
+    plt.show()
 
 if __name__=='__main__':
     T, N_points_subsample = 0.005, 1000
