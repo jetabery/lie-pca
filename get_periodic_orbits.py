@@ -95,6 +95,12 @@ Broucke = {
       0.0000000000,0.9526089117,0.0000000000,-1.6721104565,0.0000000000,0.7195015448],
      22.764421)}
 
+def make_broucke_path(name):
+    InitialValue, Period = Broucke[name]
+    X, integration_error = MakeDataset(InitialValue=InitialValue,\
+        Period=Period,T=0.005,N_points_subsample=1000,method_space='position')
+    return X
+
 def plot_paths(X):
     plt.figure(figsize=(10, 6))
     plt.plot(X[:, 0], X[:, 1], label='Body 1')
@@ -104,6 +110,7 @@ def plot_paths(X):
     plt.ylabel('Y')
     plt.title('Paths of the 3 Bodies')
     plt.legend()
+    plt.axis('equal')
     plt.show()
 
 
@@ -114,3 +121,4 @@ if __name__=='__main__':
         X, integration_error = MakeDataset(InitialValue=InitialValue,\
             Period=Period,T=T,N_points_subsample=N_points_subsample,method_space='position')
         print(integration_error)
+        plot_paths(X)

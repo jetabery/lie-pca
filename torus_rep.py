@@ -66,7 +66,9 @@ def construct_orbit(P, x_start, num_points=1000):
         x_approx[:, j] = Gj @ x_start
     return x_approx
 
-def plot_results(x, x_approx, projection=None):
+def plot_results(x, x_approx, projection=None, rng=None):
+    if rng is None:
+        rng = np.random.default_rng()
     x_real = np.vstack([x.real, x.imag]).T  # Shape becomes (n, 2*d)
     x_approx_real = np.vstack([x_approx.real, x_approx.imag]).T
 
@@ -95,7 +97,7 @@ def plot_results(x, x_approx, projection=None):
 
 if __name__=='__main__':
     rng = np.random.default_rng()
-    x = create_dataset(d=10, n=1000, noise_factor=0.01,  rng=rng) # unordered
+    x = create_dataset(d=10, n=1000, noise_factor=0.01, rng=rng) # unordered
     x = reorder_dataset(x) # so that fft makes sense
     P = get_irreps(x)  # get frequencies and corresponding irreps
     x_start = np.sum(x[:, :5], axis=1) / 5
