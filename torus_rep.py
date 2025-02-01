@@ -97,7 +97,8 @@ def plot_results(x, x_approx, projection=None, rng=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(x_plot[:, 0], x_plot[:, 1], x_plot[:, 2], label='Original', s=1)
-    ax.plot(x_approx_plot[:, 0], x_approx_plot[:, 1], x_approx_plot[:, 2], label='Approximated', color='red')
+    ax.plot(x_approx_plot[:, 0], x_approx_plot[:, 1], x_approx_plot[:, 2], \
+            label='Approximated', color='red')
     ax.legend()
     ax.set_axis_off()
     plt.show()
@@ -105,7 +106,7 @@ def plot_results(x, x_approx, projection=None, rng=None):
 
 if __name__=='__main__':
     rng = np.random.default_rng()
-    x = create_dataset(d=10, n=1000, noise_factor=0.01, rng=rng) # unordered
+    x = create_dataset(d=10, n=1000, noise_factor=0.02, rng=rng) # unordered
     x = reorder_dataset(x) # so that fft makes sense
     P = get_irreps(x)  # get frequencies and corresponding irreps
     x_start = np.sum(x[:, :5], axis=1) / 5
