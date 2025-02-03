@@ -84,6 +84,10 @@ def plot_results(x, x_approx, projection=None, rng=None):
         pca = PCA(n_components=3)
         x_plot = pca.fit_transform(x_real)  # Shape will be (n, 3)
         x_approx_plot = pca.transform(x_approx_real)
+    elif projection == 'pca_omit1':
+        pca = PCA(n_components=4)
+        x_plot = pca.fit_transform(x_real)[:, 1:]  # Shape will be (n, 3)
+        x_approx_plot = pca.transform(x_approx_real)[:, 1:]
     elif projection == 'random':
         if is_complex:
             proj_mat, _ = np.linalg.qr(rng.normal(0, 1, (2*x.shape[0], 3)))
@@ -106,9 +110,9 @@ def plot_results(x, x_approx, projection=None, rng=None):
 
 if __name__=='__main__':
     rng = np.random.default_rng()
-    x = create_dataset(d=10, n=1000, noise_factor=0.02, rng=rng) # unordered
-    x = reorder_dataset(x) # so that fft makes sense
-    P = get_irreps(x)  # get frequencies and corresponding irreps
+    x = create_dataset(d=10, n=1000, noise_factor=0.02, rng=rng)
+    x = reorder_dataset(x)
+    P = get_irreps(x) 
     x_start = np.sum(x[:, :5], axis=1) / 5
     x_approx = construct_orbit(P, x_start, num_points=x.shape[1])
 
