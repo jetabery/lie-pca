@@ -12,8 +12,7 @@ def create_dataset(d=10, n=1000, t=None, \
     if rng is None:
         rng = np.random.default_rng()
 
-    # Create Dataset
-    Q = unitary_group(dim=d, seed=rng).rvs()  # random untary matrix
+    Q = unitary_group(dim=d, seed=rng).rvs()  # random unitary matrix
     a = rng.integers(low=-freq_range, high=freq_range, endpoint=True, size=d)  # frequencies
     v = rng.normal(0, 1, d) + 1j*rng.normal(0, 1, d)
     v = v / np.linalg.norm(v)
@@ -30,15 +29,18 @@ def reorder_dataset(x):
     dists = squareform(pdist((np.vstack((x.real, x.imag)).T)))
     epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
     K = np.exp(-1 * dists**2 / epsilon)
-    for k in range(10):  # Sinkhorn
+    weights = np.ones(x.shape[1])
+    for _ in range(10):  # Sinkhorn
         inv_col_sums = 1 / np.sqrt(K.sum(axis=0))
+        weights = weights * inv_col_sums
         K = inv_col_sums * K * inv_col_sums[:, None]
         K = (K + K.T)/2
-    evals, evecs = np.linalg.eigh(K)
+    _, evecs = np.linalg.eigh(K)
     angles = np.angle(evecs[:, -2] + 1j*evecs[:, -3])
     idx = np.argsort(angles)
     x = x[:, idx]
-    return x
+    weights = weights[idx]
+    return x, weights
 
 def get_irreps(x):
     ''' Returns a dictionary.
@@ -110,8 +112,8 @@ def plot_results(x, x_approx, projection=None, rng=None):
 
 if __name__=='__main__':
     rng = np.random.default_rng()
-    x = create_dataset(d=10, n=1000, noise_factor=0.02, rng=rng)
-    x = reorder_dataset(x)
+    x = create_dataset(d=10, n=1000, noise_factor=0.01, rng=rng)
+    x, weights = reorder_dataset(x)
     P = get_irreps(x) 
     x_start = np.sum(x[:, :5], axis=1) / 5
     x_approx = construct_orbit(P, x_start, num_points=x.shape[1])
