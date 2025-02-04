@@ -26,9 +26,10 @@ def create_dataset(d=10, n=1000, t=None, \
         x = x[:, rng.permutation(n)] 
     return x
 
-def reorder_dataset(x):
+def reorder_dataset(x, epsilon=None, plot_evecs=False):
     dists = squareform(pdist((np.vstack((x.real, x.imag)).T)))
-    epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
+    if epsilon is None:
+        epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
     K = np.exp(-1 * dists**2 / epsilon)
     weights = np.ones(x.shape[1])
     for _ in range(10):  # Sinkhorn
@@ -40,6 +41,9 @@ def reorder_dataset(x):
     weights = weights / np.sum(weights)
     _, evecs = np.linalg.eigh(K)
     angles = np.angle(evecs[:, -2] + 1j*evecs[:, -3])
+    if plot_evecs:
+        plt.plot(evecs[:, -2], evecs[:, -3], 'o')
+        plt.show()
     idx = np.argsort(angles)
     t = (angles[idx] + np.pi) / (2 * np.pi) # timestamps in [0, 1]
     x = x[:, idx]
