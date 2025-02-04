@@ -20,7 +20,8 @@ def create_dataset(d=10, n=1000, t=None, \
     for j in range(n):
         x[:, j] = Q @ np.diag(np.exp(2 * np.pi * 1j * a * t[j])) @ Q.T.conj() @ v
     # print(np.max(x.imag))
-    x = x + (np.random.randn(d, n) + 1j * np.random.randn(d, n)) * noise_factor  
+    noise = (rng.standard_normal((d, n)) + 1j * rng.standard_normal((d, n))) * noise_factor
+    x = x + noise
     if shuffle_order:
         x = x[:, rng.permutation(n)] 
     return x
@@ -33,28 +34,52 @@ def reorder_dataset(x):
     for _ in range(10):  # Sinkhorn
         inv_col_sums = 1 / np.sqrt(K.sum(axis=0))
         weights = weights * inv_col_sums
+        weights = weights / np.sum(weights)  # Normalize weights
         K = inv_col_sums * K * inv_col_sums[:, None]
         K = (K + K.T)/2
+    weights = weights / np.sum(weights)
     _, evecs = np.linalg.eigh(K)
     angles = np.angle(evecs[:, -2] + 1j*evecs[:, -3])
     idx = np.argsort(angles)
+    t = (angles[idx] + np.pi) / (2 * np.pi) # timestamps in [0, 1]
     x = x[:, idx]
     weights = weights[idx]
-    return x, weights
+    return x, weights, t
 
-def get_irreps(x):
+def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False):
     ''' Returns a dictionary.
     The keys are integers, corresponding to frequencies.
     The values are matrices, corresponding to projections onto irreps
     '''
-    n = x.shape[1]
-    fft_x = fft(x)
-    detected_freqs = fftfreq(n, 1/n)[np.where(np.linalg.norm(fft_x, axis=0) > 0.01*n)].astype(int)
-    P = {}
-    for freq in detected_freqs:
-        Pbx = fft_x[:, freq]
-        P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
-    return P
+    if t is None:
+        assert weights is None
+        n = x.shape[1]
+        fft_x = fft(x)
+        detected_freqs = fftfreq(n, 1/n)[np.where(np.linalg.norm(fft_x, axis=0) > threshold*n)].astype(np.int64)
+        P = {}
+        print(detected_freqs)
+        for freq in detected_freqs:
+            Pbx = fft_x[:, freq]
+            P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
+        return P
+    else:
+        n = x.shape[1]
+        if weights is None:
+            weights = np.ones(n) / n
+        P = {}
+        norms = []
+        for freq in range(-n//2, n//2 + 1):
+            Pbx = np.sum(x * np.exp(-2j * np.pi * freq * t) * weights, axis=1)
+            norms.append(np.linalg.norm(Pbx))
+            if np.linalg.norm(Pbx) > threshold:
+                P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
+        if plot_norms: # to help with finding a good threshold
+            plt.plot(range(-n//2, n//2 + 1), norms)
+            plt.xlabel('Frequency')
+            plt.ylabel('Norm')
+            plt.title('Norms of Projections')
+            plt.show()
+        return P
 
 def construct_orbit(P, x_start, num_points=1000):
     d = x_start.shape[0]
@@ -102,7 +127,7 @@ def plot_results(x, x_approx, projection=None, rng=None):
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(x_plot[:, 0], x_plot[:, 1], x_plot[:, 2], label='Original', s=1)
+    ax.scatter(x_plot[:, 0], x_plot[:, 1], x_plot[:, 2], label='Original Data', s=1)
     ax.plot(x_approx_plot[:, 0], x_approx_plot[:, 1], x_approx_plot[:, 2], \
             label='Approximated', color='red')
     ax.legend()
@@ -112,10 +137,14 @@ def plot_results(x, x_approx, projection=None, rng=None):
 
 if __name__=='__main__':
     rng = np.random.default_rng()
-    x = create_dataset(d=10, n=1000, noise_factor=0.01, rng=rng)
-    x, weights = reorder_dataset(x)
-    P = get_irreps(x) 
-    x_start = np.sum(x[:, :5], axis=1) / 5
+    x = create_dataset(d=10, n=2000, noise_factor=0.002, rng=rng)
+    x, weights, t = reorder_dataset(x)
+    
+    n = x.shape[1]
+
+    P = get_irreps(x=x, weights=weights, t=t, threshold=0.1, plot_norms=True) 
+
+    x_start = x[:, 0]
     x_approx = construct_orbit(P, x_start, num_points=x.shape[1])
 
     plot_results(x, x_approx, projection='random', rng=rng)
