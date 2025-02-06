@@ -26,10 +26,13 @@ def create_dataset(d=10, n=1000, t=None, \
         x = x[:, rng.permutation(n)] 
     return x
 
-def reorder_dataset(x, epsilon=None, plot_evecs=False):
+def reorder_dataset(x, epsilon=None, plot_evecs=False, verbose=False):
     dists = squareform(pdist((np.vstack((x.real, x.imag)).T)))
     if epsilon is None:
-        epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
+        # epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
+        epsilon = (dists + np.eye(dists.shape[1])).min(axis=0).mean() ** 2
+        if verbose:
+            print('epsilon:', epsilon)
     K = np.exp(-1 * dists**2 / epsilon)
     weights = np.ones(x.shape[1])
     for _ in range(10):  # Sinkhorn
