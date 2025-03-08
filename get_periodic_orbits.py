@@ -2,9 +2,9 @@ import autograd.numpy as np
 import matplotlib.pyplot as plt
 import scipy.integrate
 import sklearn.decomposition
-# import gudhi.subsampling
+import gudhi.subsampling
 
-# Taken from https://github.com/HLovisiEnnes/LieDetect
+# From https://github.com/HLovisiEnnes/LieDetect
 def ThreeBodyEquation(t, y):
     # Implementation from https://betterprogramming.pub/2-d-three-body-problem-simulation-made-simpler-with-python-40d74217a42a
     f = np.zeros(12)
@@ -18,7 +18,8 @@ def ThreeBodyEquation(t, y):
     return f
 
 # Taken from https://github.com/HLovisiEnnes/LieDetect
-def MakeDataset(InitialValue, Period, T, N_points_subsample, method_space):
+def MakeDataset(InitialValue, Period, T, N_points_subsample=None, method_space='position', \
+                plot_results=False):
     '''
     method_space='position' embbed the 3 bodies into R^6 by stacking their positions, while
     method_space='position' embbed them into R^{12}, by stacking their positions and velocities
@@ -35,22 +36,27 @@ def MakeDataset(InitialValue, Period, T, N_points_subsample, method_space):
     if method_space=='velocity':
         X = np.stack((solution.y[0],solution.y[1],solution.y[2],solution.y[3],solution.y[4],solution.y[5],
                       solution.y[6],solution.y[7],solution.y[8],solution.y[9],solution.y[10],solution.y[11])).T
+    # print(X.shape)
 
-    # Subsample with gudhi    
-#     X = np.array(gudhi.subsampling.choose_n_farthest_points(points=X, nb_points = N_points_subsample))
-
+    # Subsample with gudhi   
+    if N_points_subsample is not None: 
+        X = np.array(gudhi.subsampling.choose_n_farthest_points(points=X, nb_points = N_points_subsample))
+        print(X.shape)
+    
     # # Compute integration error (norm between first and last point --- they should be equal)
     integration_error = np.linalg.norm(solution.y[:,0] - solution.y[:,-1])
     # print('Integration error (distance between endpoints):', integration_error)
     
     # # Plot the evolution in position with respect to time
-    # fig = plt.figure(figsize=(6,3)); fig.add_subplot(121); plt.axis('equal');
-    # plt.plot(solution.y[0],solution.y[1],'-g') #(x1, y1) Planet 1 in green
-    # plt.plot(solution.y[2],solution.y[3],'-r') #(x2, y2) Planet 2 in red
-    # plt.plot(solution.y[4],solution.y[5],'-b') #(x3, y3) Planet 3 in blue    
-    # ax = fig.add_subplot(122,projection='3d')
-    # Xpca = sklearn.decomposition.PCA(n_components=3).fit_transform(X)
-    # ax.scatter(Xpca[:,0], Xpca[:,1], Xpca[:,2], c='black', s=5); plt.show();
+    if plot_results:
+        fig = plt.figure(figsize=(6,3)); fig.add_subplot(121); plt.axis('equal');
+        plt.plot(solution.y[0],solution.y[1],'-g') #(x1, y1) Planet 1 in green
+        plt.plot(solution.y[2],solution.y[3],'-r') #(x2, y2) Planet 2 in red
+        plt.plot(solution.y[4],solution.y[5],'-b') #(x3, y3) Planet 3 in blue    
+        ax = fig.add_subplot(122,projection='3d')
+        Xpca = sklearn.decomposition.PCA(n_components=3).fit_transform(X)
+        ax.scatter(Xpca[:,0], Xpca[:,1], Xpca[:,2], c='black', s=5)
+        plt.show()
             
     # return X, solution, integration_error
     return X, integration_error
@@ -95,10 +101,10 @@ Broucke = {
       0.0000000000,0.9526089117,0.0000000000,-1.6721104565,0.0000000000,0.7195015448],
      22.764421)}
 
-def make_broucke_path(name):
+def make_broucke_path(name, N_points_subsample=None):
     InitialValue, Period = Broucke[name]
     X, integration_error = MakeDataset(InitialValue=InitialValue,\
-        Period=Period,T=0.005,N_points_subsample=1000,method_space='position')
+        Period=Period, T=0.005, N_points_subsample=N_points_subsample, method_space='position')
     return X
 
 def plot_orbit(X):
@@ -129,10 +135,18 @@ def plot_orbit_and_approx(X, x_approx):
     plt.show()
 
 if __name__=='__main__':
-    T, N_points_subsample = 0.005, 1000
-    for name in Broucke:
-        InitialValue, Period = Broucke[name]
-        X, integration_error = MakeDataset(InitialValue=InitialValue,\
-            Period=Period,T=T,N_points_subsample=N_points_subsample,method_space='position')
-        print(integration_error)
-        plot_orbit(X)
+    T=0.05
+    N_points_subsample = None
+    # for name in Broucke:
+    #     InitialValue, Period = Broucke[name]
+    #     X, integration_error = MakeDataset(InitialValue=InitialValue,\
+    #         Period=Period,T=T,N_points_subsample=N_points_subsample,method_space='position')
+    #     print(integration_error)
+        # plot_orbit(X)
+
+    InitialValue, Period = Broucke['A2']
+    X, integration_error = MakeDataset(InitialValue=InitialValue, Period=Period,\
+                                       T=T, N_points_subsample=N_points_subsample,
+                                       plot_results=True, method_space='position')
+    print(integration_error)
+    

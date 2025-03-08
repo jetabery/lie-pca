@@ -31,8 +31,8 @@ def reorder_dataset(x, epsilon=None, plot_evecs=False, verbose=False):
     if epsilon is None:
         # epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
         epsilon = (dists + np.eye(dists.shape[1])).min(axis=0).mean() ** 2
-        if verbose:
-            print('epsilon:', epsilon)
+    if verbose:
+        print('epsilon:', epsilon)
     K = np.exp(-1 * dists**2 / epsilon)
     weights = np.ones(x.shape[1])
     for _ in range(10):  # Sinkhorn
@@ -53,7 +53,7 @@ def reorder_dataset(x, epsilon=None, plot_evecs=False, verbose=False):
     weights = weights[idx]
     return x, weights, t
 
-def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False):
+def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, log_scale=False):
     ''' Returns a dictionary.
     The keys are integers, corresponding to frequencies.
     The values are matrices, corresponding to projections onto irreps
@@ -81,9 +81,14 @@ def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False):
             if np.linalg.norm(Pbx) > threshold:
                 P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
         if plot_norms: # to help with finding a good threshold
+            if log_scale:
+                norms = np.log10(norms)
             plt.plot(range(-n//2, n//2 + 1), norms)
             plt.xlabel('Frequency')
-            plt.ylabel('Norm')
+            if log_scale:
+                plt.ylabel('Log Norm (base 10)')
+            else:
+                plt.ylabel('Norm')
             plt.title('Norms of Projections')
             plt.show()
         return P
@@ -153,5 +158,6 @@ if __name__=='__main__':
 
     x_start = x[:, 0]
     x_approx = construct_orbit(P, x_start, num_points=x.shape[1])
+    print(x_approx.shape)
 
     plot_results(x, x_approx, projection='random', rng=rng)
