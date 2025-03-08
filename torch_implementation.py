@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torus_rep import create_dataset, reorder_dataset, get_irreps, construct_orbit, plot_results
 import numpy as np
 
 
@@ -16,6 +15,11 @@ class TorusRep(nn.Module):
         super().__init__()
         self.A = nn.Parameter(A)  # Store A as a learnable parameter if needed
         self.B = nn.Parameter(B)  # Store B as a learnable parameter if needed
+        d = x0.shape[0] 
+        m = omega.shape[0]  
+        if m < d:
+            padding = torch.zeros(d - m, dtype=torch.int)
+            omega = torch.cat([omega, padding]).to(torch.complex128)  #
         self.omega = nn.Parameter(omega, requires_grad=False)  # Fixed frequencies
         self.x0 = nn.Parameter(x0, requires_grad=False)  # Fixed initial vector
         self.period = nn.Parameter(torch.tensor(period), requires_grad=False)  # Fixed period
@@ -37,15 +41,15 @@ class TorusRep(nn.Module):
         return out.squeeze(-1)  # Shape: (batch_size, N)
 
 if __name__=='__main__':
-    N = 3  # Dimension of the matrices
-    A = torch.randn(N, N, dtype=torch.cfloat)
-    B = torch.randn(N, N, dtype=torch.cfloat)
-    omega = torch.randint(low=-5, high=5, size=(N,), dtype=torch.int)  # Integer frequencies
-    x0 = torch.randn(N, dtype=torch.cfloat)
+    d = 10  # Dimension of the matrices
+    A = torch.randn(d, d, dtype=torch.cfloat)
+    B = torch.randn(d, d, dtype=torch.cfloat)
+    omega = torch.randint(low=-5, high=5, size=(d,), dtype=torch.int)  # Integer frequencies
+    x0 = torch.randn(d, dtype=torch.cfloat)
 
     model = TorusRep(A, B, omega, x0)
 
     t = torch.arange(0, 1, 0.001).unsqueeze(-1)
     output = model(t).detach().numpy().T.astype(np.complex128)
-    print(output.dtype)
-    plot_results(output, output, projection='random')
+
+    

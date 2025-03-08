@@ -4,6 +4,8 @@ from scipy.stats import unitary_group
 from scipy.fft import fft, fftfreq
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
+import torch
+from torch_implementation import TorusRep
 
 def create_dataset(d=10, n=1000, t=None, \
         freq_range=6, rng=None, noise_factor=.01, shuffle_order=True):
@@ -53,21 +55,26 @@ def reorder_dataset(x, epsilon=None, plot_evecs=False, verbose=False):
     weights = weights[idx]
     return x, weights, t
 
-def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, log_scale=False):
+def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, \
+               log_scale=False, verbose=False, get_vectors=False):
     ''' Returns a dictionary.
     The keys are integers, corresponding to frequencies.
-    The values are matrices, corresponding to projections onto irreps
+    The values are matrices or vectors (depending on get_projections), corresponding to projections onto irreps
     '''
     if t is None:
         assert weights is None
         n = x.shape[1]
         fft_x = fft(x)
         detected_freqs = fftfreq(n, 1/n)[np.where(np.linalg.norm(fft_x, axis=0) > threshold*n)].astype(np.int64)
+        if verbose:
+            print('Detected Frequencies:', detected_freqs)
         P = {}
-        print(detected_freqs)
         for freq in detected_freqs:
             Pbx = fft_x[:, freq]
-            P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
+            if get_vectors:
+                P[freq] = Pbx / np.linalg.norm(Pbx)
+            else:
+                P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
         return P
     else:
         n = x.shape[1]
@@ -79,7 +86,12 @@ def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, log_sc
             Pbx = np.sum(x * np.exp(-2j * np.pi * freq * t) * weights, axis=1)
             norms.append(np.linalg.norm(Pbx))
             if np.linalg.norm(Pbx) > threshold:
-                P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
+                if get_vectors:
+                    P[freq] = Pbx / np.linalg.norm(Pbx)
+                else:
+                    P[freq] = (np.linalg.norm(Pbx) ** -2) * np.outer(Pbx, Pbx.conj())
+        if verbose:
+            print('Detected Frequencies:', P.keys())
         if plot_norms: # to help with finding a good threshold
             if log_scale:
                 norms = np.log10(norms)
@@ -93,17 +105,32 @@ def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, log_sc
             plt.show()
         return P
 
-def construct_orbit(P, x_start, num_points=1000):
-    d = x_start.shape[0]
-    n = num_points
-    t = np.arange(1, n + 1) / n
-    x_approx = np.zeros((d, n), dtype=complex)
-    for j in range(n):
-        Gj = np.eye(d, dtype=complex)
-        for freq in P:
-            Gj += P[freq] * (np.exp(2j * np.pi * freq * t[j]) - 1)
-        x_approx[:, j] = Gj @ x_start
-    return x_approx
+def construct_orbit(irreps_dict, x_start, num_points=1000):
+    '''
+    Constructs the orbit of a point x_start under the torus representation defined by irreps_dict.
+    If the irreps are projection matrices, constructs the orbit using classical numpy operations.
+    If the irreps are vectors, constructs the orbit using the TorusRep class.
+    '''
+    irreps_shape = list(irreps_dict.values())[0].shape
+    from_proj_matrices = len(irreps_shape) == 2
+    if from_proj_matrices:
+        d = x_start.shape[0]
+        n = num_points
+        t = np.arange(1, n + 1) / n
+        x_approx = np.zeros((d, n), dtype=complex)
+        for j in range(n):
+            Gj = np.eye(d, dtype=complex)
+            for freq in irreps_dict.keys():
+                Gj += irreps_dict[freq] * (np.exp(2j * np.pi * freq * t[j]) - 1)
+            x_approx[:, j] = Gj @ x_start
+        return x_approx
+    else:
+        A, B, omega = get_params_for_TorusRep(irreps_dict)
+        x0 = torch.from_numpy(x[:, 0])
+        model = TorusRep(A, B, omega, x0)
+        t = torch.linspace(0, 1, num_points).unsqueeze(-1)
+        x_approx = model(t).detach().numpy().T.astype(np.complex128)
+        return x_approx
 
 def plot_results(x, x_approx, projection=None, rng=None):
     is_complex = x.dtype == complex
@@ -146,6 +173,22 @@ def plot_results(x, x_approx, projection=None, rng=None):
     ax.set_axis_off()
     plt.show()
 
+def get_params_for_TorusRep(irreps_dict):
+    ''' Returns a matrix representation of the torus representation. 
+    Accepts a dictionary of (vector) irreps. 
+    Returns a (d,d) pytorch tensor'''
+    d = list(irreps_dict.values())[0].shape[0]
+    A = np.zeros((d, d), dtype=np.complex128)
+    for k, Pbx in enumerate(irreps_dict.values()):
+        Pbx = Pbx[:, None]
+        basis_vector = np.zeros(d, dtype=np.complex128)[:, None]
+        basis_vector[k, 0] = 1
+        A += Pbx @ basis_vector.T
+    A = torch.from_numpy(A)
+    B = A.conj().T
+    omega = torch.tensor([freq for freq in irreps_dict.keys()])
+    return A, B, omega
+
 
 if __name__=='__main__':
     rng = np.random.default_rng()
@@ -154,10 +197,11 @@ if __name__=='__main__':
     
     n = x.shape[1]
 
-    P = get_irreps(x=x, weights=weights, t=t, threshold=0.1, plot_norms=True) 
+    irreps_dict = get_irreps(x=x, weights=weights, t=t, threshold=0.1,\
+                    plot_norms=False, verbose=True, get_vectors=True) 
 
     x_start = x[:, 0]
-    x_approx = construct_orbit(P, x_start, num_points=x.shape[1])
+    x_approx = construct_orbit(irreps_dict, x_start, num_points=x.shape[1])
     print(x_approx.shape)
 
     plot_results(x, x_approx, projection='random', rng=rng)
