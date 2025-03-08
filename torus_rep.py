@@ -126,7 +126,7 @@ def construct_orbit(irreps_dict, x_start, num_points=1000):
         return x_approx
     else:
         A, B, omega = get_params_for_TorusRep(irreps_dict)
-        x0 = torch.from_numpy(x[:, 0])
+        x0 = torch.from_numpy(x_start)
         model = TorusRep(A, B, omega, x0)
         t = torch.linspace(0, 1, num_points).unsqueeze(-1)
         x_approx = model(t).detach().numpy().T.astype(np.complex128)
