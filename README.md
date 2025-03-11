@@ -2,15 +2,10 @@
 
 'get_periodic_orbits.py' uses code from <https://github.com/HLovisiEnnes/LieDetect>
 
-# Recovering Lie Groups from Orbits
-
-## Author
-**Julius Tabery**  
-*Date: September 2024*
-
 ---
 
 ## 1. Best-Case Scenario
+
 Suppose \( Q \in U(d) \) and \( a \in \mathbb{Z}^d \) (non-zero vector). The Lie group
 
 \[
@@ -26,6 +21,7 @@ G(t) = Q e^{\text{diag}(2\pi i a t)} Q^{-1}
 for \( t \in T \cong \mathbb{R}/\mathbb{Z} \). Assume that the map \( t \mapsto G(t)x \) is injective for a generic \( x \in \mathbb{C}^d \) (TODO: prove this holds generically).
 
 ### Recovery Process:
+
 1. Given points \( x_1, \ldots, x_n \in \mathbb{C}^d \) where:
 
 \[
@@ -73,9 +69,11 @@ If all nontrivial subrepresentations are 1-dimensional, then \( H = G \).
 ---
 
 ## 2. What if the Dataset is Reordered/Unordered?
+
 Let \( D_n \) be the dihedral group as a subgroup of the symmetric group \( S_n \). 
 
 ### Theorem 1
+
 *Suppose \( H_1 \) is calculated from the ordered dataset \( x_1, \ldots, x_n \). If the dataset is reordered by some permutation \( \sigma \in D_n \), then the recovered Lie group \( H_2 \) is identical to \( H_1 \).*
 
 **Proof Outline**:
@@ -96,6 +94,7 @@ Thus, in both cases, \( H_1 = H_2 \).
 ---
 
 ## 3. What if the Points are Not Evenly Spaced?
+
 - Let \( t_1, \ldots, t_n \) be sampled uniformly from \( T \).
 - Construct the matrix:
 
@@ -108,12 +107,14 @@ K_{ij} = \exp \left( -\frac{\|x_{t_i} - x_{t_j}\|^2}{2 \epsilon^2} \right)
 ---
 
 ## 4. What if We Add Noise?
+
 (TODO: Prove this holds with high probability under noise.)
 
 ---
 
 ## 5. Technical Lemmas
 ### Lemma 1
+
 Let \( f : T \to \mathbb{R} \) be differentiable, with \( f'(0) \neq 0 \) and \( f^{-1}(0) = \{0\} \). Then:
 
 \[
@@ -123,6 +124,7 @@ Let \( f : T \to \mathbb{R} \) be differentiable, with \( f'(0) \neq 0 \) and \(
 (TODO: Clean up the proof.)
 
 ### Lemma 2
+
 For sufficiently large \( n \), the eigenvectors of the kernel matrix:
 
 \[
@@ -133,12 +135,6 @@ correspond to orthogonal sinusoids of frequency 1.
 
 ---
 
-## 6. Practical Notes
-- The method generalizes to higher-dimensional Lie groups.
-- Next steps:
-  - Prove that the result holds under noise.
-  - Extend to higher-dimensional orbits.
-  - Explore applications in machine learning and data augmentation.
 
 ---
 
