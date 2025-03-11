@@ -17,11 +17,6 @@ This project explores the problem of recovering the underlying Lie group that de
 - **Noise Robustness:**  
   The method is theoretically robust to noise (proof pending).
 
-## Mathematical Tools
-- Fourier analysis on Lie groups
-- Orthogonal projectors on subrepresentations
-- Sinkhorn's algorithm for kernel-based methods
-
 ## Next Steps
 - Generalize to higher-dimensional orbits
 - Prove noise robustness
