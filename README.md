@@ -27,7 +27,7 @@ This project explores the problem of recovering the underlying Lie group that de
 ## 🚀 TODO
 - Prove that the recovered group is a Lie group.
 - Reformulate in terms of the discrete Fourier transform.
-- Clean up and finalize the technical proofs.
+- Clean up and the technical proofs.
 
 ---
 
