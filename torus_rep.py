@@ -7,8 +7,22 @@ from scipy.spatial.distance import pdist, squareform
 import torch
 from torch_implementation import TorusRep
 
-def create_dataset(d=10, n=1000, t=None, \
-        freq_range=6, rng=None, noise_factor=.01, shuffle_order=True):
+def create_dataset(d=10, n=1000, t=None, freq_range=6, rng=None, noise_factor=.01, shuffle_order=True):
+    """
+    Creates a synthetic dataset of complex-valued vectors with specified properties.
+
+    Parameters:
+    d (int): Dimension of the vectors. Default is 10.
+    n (int): Number of vectors to generate. Default is 1000.
+    t (array-like, optional): Time points at which to evaluate the vectors. If None, defaults to np.arange(1, n+1)/n.
+    freq_range (int): Range of frequencies for the random integers. Default is 6.
+    rng (np.random.Generator, optional): Random number generator instance. If None, defaults to np.random.default_rng().
+    noise_factor (float): Standard deviation of the Gaussian noise to be added. Default is 0.01.
+    shuffle_order (bool): Whether to shuffle the order of the vectors. Default is True.
+
+    Returns:
+    np.ndarray: A (d, n) array of complex-valued vectors.
+    """
     if t is None:
         t = np.arange(1, n+1)/n
     if rng is None:
@@ -29,6 +43,22 @@ def create_dataset(d=10, n=1000, t=None, \
     return x
 
 def reorder_dataset(x, epsilon=None, plot_evecs=False, verbose=False):
+    """
+    Reorders the dataset based on the angles of the eigenvectors of a kernel matrix.
+    Should result in a dataset that is in the same order as the original dataset (modulo the dihedral group).
+
+    Parameters:
+    x (numpy.ndarray): Input complex dataset of shape (n_features, n_samples).
+    epsilon (float, optional): Scaling parameter for the kernel. If None, it is computed automatically.
+    plot_evecs (bool, optional): If True, plots the eigenvectors.
+    verbose (bool, optional): If True, prints the value of epsilon.
+
+    Returns:
+    tuple: A tuple containing:
+        - x (numpy.ndarray): Reordered dataset.
+        - weights (numpy.ndarray): Normalized weights.
+        - t (numpy.ndarray): Timestamps in the range [0, 1].
+    """
     dists = squareform(pdist((np.vstack((x.real, x.imag)).T)))
     if epsilon is None:
         # epsilon = np.min(dists + np.eye(dists.shape[1])) ** 2
@@ -55,12 +85,32 @@ def reorder_dataset(x, epsilon=None, plot_evecs=False, verbose=False):
     weights = weights[idx]
     return x, weights, t
 
-def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, \
-               log_scale=False, verbose=False, get_vectors=False):
-    ''' Returns a dictionary.
-    The keys are integers, corresponding to frequencies.
-    The values are matrices or vectors (depending on get_projections), corresponding to projections onto irreps
-    '''
+def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, log_scale=False, verbose=False, get_vectors=False):
+    """
+    Computes the irreducible representations (irreps) of the input data.
+
+    Parameters:
+    x : numpy.ndarray
+        Input data matrix where each column represents a data point.
+    weights : numpy.ndarray, optional
+        Weights for each data point. If None, uniform weights are used.
+    t : numpy.ndarray, optional
+        Time points corresponding to each data point. If None, FFT is used.
+    threshold : float, optional
+        Threshold for detecting significant frequencies. Default is 0.01.
+    plot_norms : bool, optional
+        If True, plots the norms of the projections to help with finding a good threshold. Default is False.
+    log_scale : bool, optional
+        If True, uses a logarithmic scale for the norms plot. Default is False.
+    verbose : bool, optional
+        If True, prints detected frequencies. Default is False.
+    get_vectors : bool, optional
+        If True, returns normalized projection vectors instead of projection matrices. Default is False.
+
+    Returns:
+    dict
+        A dictionary where keys are detected frequencies and values are either projection matrices or vectors, depending on the value of get_vectors.
+    """
     if t is None:
         assert weights is None
         n = x.shape[1]
@@ -106,11 +156,30 @@ def get_irreps(x, weights=None, t=None, threshold=0.01, plot_norms=False, \
         return P
 
 def construct_orbit(irreps_dict, x_start, num_points=1000):
-    '''
-    Constructs the orbit of a point x_start under the torus representation defined by irreps_dict.
-    If the irreps are projection matrices, constructs the orbit using classical numpy operations.
-    If the irreps are vectors, constructs the orbit using the TorusRep class.
-    '''
+    """
+    Constructs the orbit of a point `x_start` under the torus representation defined by `irreps_dict`.
+
+    Parameters:
+    -----------
+    irreps_dict : dict
+        A dictionary where keys are frequencies and values are either projection matrices or vectors 
+        representing the irreducible representations (irreps) of the torus.
+    x_start : numpy.ndarray
+        The starting point in the space where the orbit is to be constructed.
+    num_points : int, optional
+        The number of points to generate along the orbit. Default is 1000.
+
+    Returns:
+    --------
+    numpy.ndarray
+        An array of shape (d, num_points) representing the orbit of the point `x_start` under the torus 
+        representation. The array is complex-valued.
+
+    Notes:
+    ------
+    - If the irreps are projection matrices, the orbit is constructed using classical numpy operations.
+    - If the irreps are vectors, the orbit is constructed using the `TorusRep` class.
+    """
     irreps_shape = list(irreps_dict.values())[0].shape
     from_proj_matrices = len(irreps_shape) == 2
     if from_proj_matrices:
@@ -133,6 +202,30 @@ def construct_orbit(irreps_dict, x_start, num_points=1000):
         return x_approx
 
 def plot_results(x, x_approx, projection=None, rng=None):
+    """
+    Plots the original and approximated data in 3D.
+
+    Parameters:
+    x : numpy.ndarray
+        The original data array. Can be real or complex.
+    x_approx : numpy.ndarray
+        The approximated data array. Should have the same shape as `x`.
+    projection : str, optional
+        The type of projection to use for plotting. Options are:
+        - None: Use the first three dimensions of the data.
+        - 'pca': Use PCA to reduce the data to three dimensions.
+        - 'pca_omit1': Use PCA to reduce the data to four dimensions and omit the first component.
+        - 'random': Use a random projection to reduce the data to three dimensions.
+    rng : numpy.random.Generator, optional
+        A random number generator instance for reproducibility. If None, a default RNG will be used.
+
+    Raises:
+    ValueError
+        If an invalid projection type is provided.
+
+    Returns:
+    None
+    """
     is_complex = x.dtype == complex
     if rng is None:
         rng = np.random.default_rng()
@@ -174,9 +267,22 @@ def plot_results(x, x_approx, projection=None, rng=None):
     plt.show()
 
 def get_params_for_TorusRep(irreps_dict):
-    ''' Returns a matrix representation of the torus representation. 
-    Accepts a dictionary of (vector) irreps. 
-    Returns a (d,d) pytorch tensor'''
+    """
+    Returns parameters for matrix version of the torus representation.
+    Representation takes the form:
+    A @ exp(diag(2j * pi * omega * t)) @ B @ x0
+
+    Args:
+        irreps_dict (dict): A dictionary where keys are frequencies (or other identifiers) 
+                            and values are (d, d) numpy arrays representing vector irreducible 
+                            representations (irreps).
+
+    Returns:
+        tuple: A tuple containing:
+            - A (torch.Tensor): A (d, d) complex tensor representing the torus representation.
+            - B (torch.Tensor): The conjugate transpose of A.
+            - omega (torch.Tensor): A tensor containing the frequencies (keys of the input dictionary).
+    """
     d = list(irreps_dict.values())[0].shape[0]
     A = np.zeros((d, d), dtype=np.complex128)
     for k, Pbx in enumerate(irreps_dict.values()):
@@ -192,7 +298,7 @@ def get_params_for_TorusRep(irreps_dict):
 
 if __name__=='__main__':
     rng = np.random.default_rng()
-    x = create_dataset(d=10, n=2000, noise_factor=0.002, rng=rng)
+    x = create_dataset(d=10, n=2000, noise_factor=0.004, rng=rng)
     x, weights, t = reorder_dataset(x)
     
     n = x.shape[1]
@@ -200,8 +306,7 @@ if __name__=='__main__':
     irreps_dict = get_irreps(x=x, weights=weights, t=t, threshold=0.1,\
                     plot_norms=False, verbose=True, get_vectors=True) 
 
-    x_start = x[:, 0]
+    x_start = x[:, :3].mean(axis=1)
     x_approx = construct_orbit(irreps_dict, x_start, num_points=x.shape[1])
-    print(x_approx.shape)
 
     plot_results(x, x_approx, projection='random', rng=rng)
