@@ -6,11 +6,14 @@ import numpy as np
 class TorusRep(nn.Module):
     def __init__(self, A: torch.Tensor, B: torch.Tensor, omega: torch.Tensor, x0: torch.Tensor, period: float = 1.0):
         """
-        A: torch.Tensor (NxN complex matrix)
-        B: torch.Tensor (NxN complex matrix)
-        omega: torch.Tensor (N-dimensional integer vector)
-        x0: torch.Tensor (N-dimensional complex vector)
-        period: float (real scalar)
+        Initialize the TorusRep model.
+
+        Parameters:
+        A (torch.Tensor): An NxN complex matrix.
+        B (torch.Tensor): An NxN complex matrix.
+        omega (torch.Tensor): An N-dimensional integer vector representing frequencies.
+        x0 (torch.Tensor): An N-dimensional complex vector representing the initial state.
+        period (float): A real scalar representing the period. Default is 1.0.
         """
         super().__init__()
         self.A = nn.Parameter(A)  # Store A as a learnable parameter if needed
@@ -26,8 +29,13 @@ class TorusRep(nn.Module):
 
     def forward(self, t: torch.Tensor) -> torch.Tensor:
         """
-        t: torch.Tensor (scalar or tensor of shape (batch_size, 1))
-        Returns: torch.Tensor (complex vector of shape (batch_size, N))
+        Forward pass of the TorusRep model.
+
+        Parameters:
+        t (torch.Tensor): A scalar or tensor of shape (batch_size, 1) representing time.
+
+        Returns:
+        torch.Tensor: A complex vector of shape (batch_size, N) representing the output.
         """
         # Compute the diagonal complex exponentials
         exp_diag = torch.exp(2j * torch.pi * self.omega * t / self.period)  # Shape: (batch_size, N)
@@ -52,4 +60,3 @@ if __name__=='__main__':
     t = torch.arange(0, 1, 0.001).unsqueeze(-1)
     output = model(t).detach().numpy().T.astype(np.complex128)
 
-    
